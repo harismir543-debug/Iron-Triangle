@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Iron Triangle Interactive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const IronTriangle = () => {
+            const [values, setValues] = useState({
+                scope: 50,
+                time: 50,
+                cost: 50,
+            });
+            const [quality, setQuality] = useState(100);
+
+            // Logic: Quality is the ratio of resources (Time/Cost) to the work (Scope)
+            useEffect(() => {
+                const totalResources = (values.time + values.cost) / 2;
+                const calculatedQuality = (totalResources / values.scope) * 100;
+                setQuality(Math.min(Math.round(calculatedQuality), 150));
+            }, [values]);
+
+            const handleSlider = (key, val) => {
+                setValues(prev => ({ ...prev, [key]: parseInt(val) }));
+            };
+
+            const applyPreset = (s, t, c) => {
+                setValues({ scope: s, time: t, cost: c });
+            };
+
+            // SVG Coordinate Math for the Triangle Vertices
+            const getPoint = (angle, value) => {
+                const radius = (value / 100) * 120;
+                const x = 150 + radius * Math.cos((angle * Math.PI) / 180);
+                const y = 150 + radius * Math.sin((angle * Math.PI) / 180);
+                return `${x},${y}`;
+            };
+
+            const points = `${getPoint(270, values.scope)} ${getPoint(30, values.time)} ${getPoint(150, values.cost)}`;
+
+            const getStatusColor = () => {
+                if (quality < 75) return 'text-red-600';
+                if (quality > 115) return 'text-blue-600';
+                return 'text-green-600';
+            };
+
+            const getBgColor = () => {
+                if (quality < 75) return '#fee2e2'; // Red
+                if (quality > 115) return '#dbeafe'; // Blue
+                return '#dcfce7'; // Green
+            };
+
+            return (
+                <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-4xl w-full border border-gray-200">
+                    <div className="text-center mb-8">
+                        <h1 className="text-4xl font-black text-gray-800 tracking-tight">THE IRON TRIANGLE</h1>
+                        <p className="text-gray-500 mt-2 font-medium">Visualizing the constraints of Project Management</p>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-12 items-center">
+                        {/* Visualization Side */}
+                        <div className="flex-1 flex flex-col items-center">
+                            <div className="relative bg-gray-50 p-4 rounded-full border border-gray-100 shadow-inner">
+                                <svg width="300" height="300" viewBox="0 0 300 300">
+                                    {/* Background Web/Guides */}
+                                    <circle cx="150" cy="150" r="120" fill="none" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="5,5" />
+                                    <circle cx="150" cy="150" r="60" fill="none" stroke="#f3f4f6" strokeWidth="1" />
+                                    
+                                    {/* The Interactive Polygon */}
+                                    <polygon 
+                                        points={points} 
+                                        fill={getBgColor()} 
+                                        stroke="currentColor" 
+                                        strokeWidth="4"
+                                        style={{ transition: 'all 0.3s ease-out' }}
+                                        className={getStatusColor()}
+                                    />
+
+                                    {/* Labels */}
+                                    <text x="150" y="20" textAnchor="middle" className="text-[12px] font-bold fill-gray-400">SCOPE</text>
+                                    <text x="265" y="235" textAnchor="middle" className="text-[12px] font-bold fill-gray-400">TIME</text>
+                                    <text x="35" y="235" textAnchor="middle" className="text-[12px] font-bold fill-gray-400">COST</text>
+                                </svg>
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Calculated Quality</span>
+                                <div className={`text-6xl font-black transition-colors duration-500 ${getStatusColor()}`}>
+                                    {quality}%
+                                </div>
+                                <p className="text-sm font-semibold mt-1 italic text-gray-500">
+                                    {quality < 75 ? "⚠️ Warning: Low Quality / Technical Debt" : 
+                                     quality > 115 ? "💎 Gold-Plated (Waste of Resources)" : 
+                                     "✅ Perfect Balance"}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Controls Side */}
+                        <div className="flex-1 w-full space-y-10">
+                            {[
+                                { label: 'Scope (The "What")', key: 'scope', color: 'bg-gray-800' },
+                                { label: 'Time (The "When")', key: 'time', color: 'bg-gray-800' },
+                                { label: 'Cost (The "Who/How Much")', key: 'cost', color: 'bg-gray-800' }
+                            ].map((item) => (
+                                <div key={item.key}>
+                                    <div className="flex justify-between mb-2">
+                                        <label className="text-xs font-black uppercase tracking-wider text-gray-600">{item.label}</label>
+                                        <span className="text-xs font-bold text-gray-900">{values[item.key]}%</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="10" max="100" 
+                                        value={values[item.key]} 
+                                        onChange={(e) => handleSlider(item.key, e.target.value)}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                                    />
+                                </div>
+                            ))}
+
+                            <div className="pt-6 border-t border-gray-100">
+                                <p className="text-[10px] font-black text-gray-400 mb-4 uppercase tracking-[0.2em]">Common Scenarios</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => applyPreset(100, 30, 30)} className="px-3 py-2 bg-red-50 text-red-700 text-[10px] font-bold rounded-lg hover:bg-red-100 transition border border-red-100">THE STARTUP CRASH</button>
+                                    <button onClick={() => applyPreset(90, 100, 100)} className="px-3 py-2 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-lg hover:bg-blue-100 transition border border-blue-100">THE GOV PROJECT</button>
+                                    <button onClick={() => applyPreset(30, 40, 30)} className="px-3 py-2 bg-green-50 text-green-700 text-[10px] font-bold rounded-lg hover:bg-green-100 transition border border-green-100">THE LEAN MVP</button>
+                                    <button onClick={() => applyPreset(50, 50, 50)} className="px-3 py-2 bg-gray-100 text-gray-700 text-[10px] font-bold rounded-lg hover:bg-gray-200 transition">RESET BALANCE</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<IronTriangle />);
+    </script>
+</body>
+</html>
